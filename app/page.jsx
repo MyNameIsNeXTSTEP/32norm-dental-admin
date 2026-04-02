@@ -1,6 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AppHeader } from "@/components/treatment/app-header";
+import { AuthScreen } from "@/components/treatment/auth-screen";
+import { CategoryTabs } from "@/components/treatment/category-tabs";
+import { PatientDetailsForm } from "@/components/treatment/patient-details-form";
+import { PlanActionsBar } from "@/components/treatment/plan-actions-bar";
+import { SavedPlansPanel } from "@/components/treatment/saved-plans-panel";
+import { ServicesCatalogPanel } from "@/components/treatment/services-catalog-panel";
+import { SessionCheckScreen } from "@/components/treatment/session-check-screen";
+import { TermsCard } from "@/components/treatment/terms-card";
+import { TreatmentPlanTable } from "@/components/treatment/treatment-plan-table";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const DEFAULT_SERVICES = {
   surgery: [
@@ -85,6 +96,7 @@ export default function HomePage() {
   const [newPrice, setNewPrice] = useState("");
   const [isApiOffline, setIsApiOffline] = useState(false);
   const [offlineError, setOfflineError] = useState("");
+  const [theme, setTheme] = useState("light");
 
   useEffect(() => {
     let mounted = true;
@@ -112,6 +124,22 @@ export default function HomePage() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem("dent_theme");
+    if (storedTheme === "dark" || storedTheme === "light") {
+      setTheme(storedTheme);
+      return;
+    }
+    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+      setTheme("dark");
+    }
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("dent_theme", theme);
+  }, [theme]);
 
   useEffect(() => {
     if (!user.id) return;
@@ -428,312 +456,110 @@ export default function HomePage() {
     );
   }
 
+  function toggleTheme() {
+    setTheme((prev) => (prev === "dark" ? "light" : "dark"));
+  }
+
+  function selectCategory(cat) {
+    setCurrentCat(cat);
+    if (cat === "saved") {
+      loadSavedPlans();
+    }
+  }
+
   if (isCheckingSession) {
-    return <main className="center-card">Проверка сессии...</main>;
+    return <SessionCheckScreen />;
   }
 
   if (!user.id) {
     return (
-      <main className="center-layout">
-        <form className="auth-card" onSubmit={handleLogin}>
-          <h1>Вход для врача</h1>
-          <input
-            type="text"
-            value={login}
-            onChange={(event) => setLogin(event.target.value)}
-            placeholder="Логин"
-            autoComplete="username"
-            required
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Пароль"
-            autoComplete="current-password"
-            required
-          />
-          <button type="submit">Войти</button>
-          {authError ? <div className="error-box">{authError}</div> : null}
-          {isApiOffline ? <div className="warn-box">{offlineError}</div> : null}
-        </form>
-      </main>
+      <AuthScreen
+        login={login}
+        password={password}
+        setLogin={setLogin}
+        setPassword={setPassword}
+        handleLogin={handleLogin}
+        authError={authError}
+        isApiOffline={isApiOffline}
+        offlineError={offlineError}
+        theme={theme}
+        onThemeToggle={toggleTheme}
+      />
     );
   }
 
   return (
-    <main className="app-shell">
-      <div className="app">
-        <div className="header-bar">
-          <div>
-            <h2>ООО "32-Норма"</h2>
-            <span>
-              Врач: {user.display_name || user.login} ({user.login})
-            </span>
-          </div>
-          <button className="action-btn clear-btn" onClick={handleLogout}>
-            Выйти
-          </button>
-        </div>
+    <main className="min-h-screen bg-background text-foreground">
+      <div className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">
+        <div className="rounded-3xl border border-border/70 bg-card shadow-xl shadow-black/5 dark:shadow-black/20">
+          <AppHeader user={user} theme={theme} onThemeToggle={toggleTheme} onLogout={handleLogout} />
 
-        {isApiOffline ? <div className="warn-box">{offlineError}</div> : null}
+          {isApiOffline ? (
+            <Alert className="mx-4 mt-4 border-amber-300/40 bg-amber-50/70 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200 sm:mx-6">
+              <AlertDescription>{offlineError}</AlertDescription>
+            </Alert>
+          ) : null}
 
-        <div className="main-layout">
-          <div className="left-column">
-            <div className="tabs">
-              <button
-                className={`tab ${currentCat === "surgery" ? "active" : ""}`}
-                onClick={() => setCurrentCat("surgery")}
-              >
-                Хирургия
-              </button>
-              <button
-                className={`tab ${currentCat === "ortho" ? "active" : ""}`}
-                onClick={() => setCurrentCat("ortho")}
-              >
-                Ортопедия
-              </button>
-              <button
-                className={`tab ${currentCat === "saved" ? "active" : ""}`}
-                onClick={() => {
-                  setCurrentCat("saved");
-                  loadSavedPlans();
-                }}
-              >
-                Сохраненные планы
-              </button>
-            </div>
+          <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[1.2fr_1fr]">
+            <section className="space-y-6 print:hidden">
+              <CategoryTabs currentCat={currentCat} onSelect={selectCategory} />
 
-            {currentCat !== "saved" ? (
-              <>
-                <input
-                  id="searchInput"
-                  type="text"
-                  value={searchText}
-                  onChange={(event) => setSearchText(event.target.value)}
-                  placeholder="Поиск услуги..."
+              {currentCat !== "saved" ? (
+                <ServicesCatalogPanel
+                  searchText={searchText}
+                  setSearchText={setSearchText}
+                  filteredServices={filteredServices}
+                  addToPlan={addToPlan}
+                  deleteService={deleteService}
+                  parseFile={parseFile}
+                  isParsingFile={isParsingFile}
+                  ocrResult={ocrResult}
+                  ocrText={ocrText}
+                  addParsedServices={addParsedServices}
+                  isAddFormVisible={isAddFormVisible}
+                  setIsAddFormVisible={setIsAddFormVisible}
+                  newName={newName}
+                  setNewName={setNewName}
+                  newPrice={newPrice}
+                  setNewPrice={setNewPrice}
+                  addNewService={addNewService}
                 />
-                <div className="price-list">
-                  {!filteredServices.length ? (
-                    <div className="empty-block">Ничего не найдено</div>
-                  ) : (
-                    filteredServices.map((item) => (
-                      <div className="service-item" key={`${item.name}_${String(item.price)}`}>
-                        <div className="service-info">
-                          <span className="service-name">{item.name}</span>
-                          <span className="service-price">
-                            {typeof item.price === "number" ? `${item.price} ₽` : `${item.price} ₽`}
-                          </span>
-                        </div>
-                        <div className="actions">
-                          <button className="add-btn" onClick={() => addToPlan(item)}>
-                            Добавить
-                          </button>
-                          <button
-                            className="delete-btn"
-                            onClick={() => deleteService(item.name)}
-                            title="Удалить из прайса"
-                          >
-                            x
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <div className="ocr-section">
-                  <div className="ocr-header">
-                    <h3>Загрузить прайс-лист</h3>
-                    <button
-                      className="action-btn save-btn"
-                      onClick={() => setIsAddFormVisible((prev) => !prev)}
-                    >
-                      Добавить вручную
-                    </button>
-                  </div>
-
-                  <div className="ocr-controls">
-                    <input type="file" accept="*/*" onChange={parseFile} />
-                  </div>
-                  <div id="ocrResult">{isParsingFile ? "Обработка..." : ocrResult}</div>
-                  {ocrText ? (
-                    <button className="action-btn save-btn" onClick={addParsedServices}>
-                      Добавить распознанное
-                    </button>
-                  ) : null}
-                </div>
-
-                {isAddFormVisible ? (
-                  <div className="add-service-form">
-                    <input
-                      type="text"
-                      value={newName}
-                      onChange={(event) => setNewName(event.target.value)}
-                      placeholder="Название услуги"
-                    />
-                    <input
-                      type="text"
-                      value={newPrice}
-                      onChange={(event) => setNewPrice(event.target.value)}
-                      placeholder="Цена"
-                    />
-                    <button onClick={addNewService}>Сохранить</button>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className="saved-plans-list">
-                <input
-                  type="text"
-                  className="saved-search"
-                  value={savedSearch}
-                  onChange={(event) => setSavedSearch(event.target.value)}
-                  placeholder="Поиск по пациенту..."
+              ) : (
+                <SavedPlansPanel
+                  savedSearch={savedSearch}
+                  setSavedSearch={setSavedSearch}
+                  filteredSavedPlans={filteredSavedPlans}
+                  loadSavedPlanById={loadSavedPlanById}
+                  deleteSavedPlanById={deleteSavedPlanById}
                 />
-                {!filteredSavedPlans.length ? (
-                  <div className="empty-block">Нет сохраненных планов</div>
-                ) : (
-                  filteredSavedPlans.map((item) => (
-                    <div className="saved-plan-item" key={item.id}>
-                      <div className="saved-plan-info">
-                        <strong>{item.patient_name || "Без имени"}</strong>
-                        <br />
-                        <span>{item.plan_date || "-"}</span>
-                      </div>
-                      <div className="saved-plan-actions">
-                        <button className="load-saved-btn" onClick={() => loadSavedPlanById(item.id)}>
-                          Загрузить
-                        </button>
-                        <button
-                          className="delete-saved-btn"
-                          onClick={() => deleteSavedPlanById(item.id)}
-                        >
-                          Удалить
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+              )}
+            </section>
 
-          <div className="right-column">
-            <div className="treatment-plan">
-              <div className="plan-header">
-                <h3>План лечения</h3>
-              </div>
-              <table className="plan-table">
-                <thead>
-                  <tr>
-                    <th>Услуга</th>
-                    <th>Цена</th>
-                    <th>Кол-во</th>
-                    <th>Сумма</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {!plan.length ? (
-                    <tr>
-                      <td colSpan={5} className="empty-cell">
-                        План пуст
-                      </td>
-                    </tr>
-                  ) : (
-                    plan.map((item, index) => {
-                      const sum = typeof item.price === "number" ? item.price * item.quantity : null;
-                      return (
-                        <tr key={`${item.name}_${index}`}>
-                          <td>{item.name}</td>
-                          <td>{typeof item.price === "number" ? `${item.price} ₽` : item.price}</td>
-                          <td>
-                            <input
-                              type="number"
-                              min={1}
-                              value={item.quantity}
-                              onChange={(event) => updateQty(index, event.target.value)}
-                            />
-                          </td>
-                          <td>{sum === null ? "—" : `${sum.toLocaleString()} ₽`}</td>
-                          <td>
-                            <button className="remove-item" onClick={() => removeItem(index)}>
-                              x
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-                <tfoot>
-                  <tr className="total-row">
-                    <td colSpan={3}>ИТОГО:</td>
-                    <td>{totalAmount.toLocaleString()} ₽</td>
-                    <td />
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
+            <section className="space-y-4">
+              <TreatmentPlanTable
+                plan={plan}
+                totalAmount={totalAmount}
+                updateQty={updateQty}
+                removeItem={removeItem}
+              />
 
-            <div className="patient-info-simple">
-              <div className="field">
-                <label>Пациент:</label>
-                <input
-                  type="text"
-                  value={patientName}
-                  onChange={(event) => setPatientName(event.target.value)}
-                  placeholder="Иванов И.И."
-                />
-              </div>
-              <div className="field">
-                <label>Дата:</label>
-                <input
-                  type="date"
-                  value={planDate}
-                  onChange={(event) => setPlanDate(event.target.value)}
-                />
-              </div>
-              <div className="field">
-                <label>Врач:</label>
-                <input
-                  type="text"
-                  value={doctorName}
-                  onChange={(event) => setDoctorName(event.target.value)}
-                  placeholder="Петров П.П."
-                />
-              </div>
-            </div>
+              <PatientDetailsForm
+                patientName={patientName}
+                setPatientName={setPatientName}
+                planDate={planDate}
+                setPlanDate={setPlanDate}
+                doctorName={doctorName}
+                setDoctorName={setDoctorName}
+              />
 
-            <div className="terms-box">
-              <div className="terms-text">
-                <strong>Срок действия плана:</strong> два месяца со дня подписания.
-                <br />
-                В дальнейшем стоимость может измениться.
-                <br />
-                Также согласно договору стоимость может измениться в процессе операции, о чем
-                пациент будет предупрежден устно.
-              </div>
-              <div className="signature-static">
-                С условиями согласен. Подпись _________________
-              </div>
-            </div>
+              <TermsCard />
 
-            <div className="plan-actions">
-              <button className="action-btn save-btn" onClick={saveCurrentPlan}>
-                Сохранить
-              </button>
-              <button className="action-btn email-btn" onClick={sendToMail}>
-                Отправить на Mail.ru
-              </button>
-              <button className="action-btn print-btn" onClick={() => window.print()}>
-                Печать
-              </button>
-              <button className="action-btn clear-btn" onClick={() => setPlan([])}>
-                Очистить
-              </button>
-            </div>
+              <PlanActionsBar
+                saveCurrentPlan={saveCurrentPlan}
+                sendToMail={sendToMail}
+                clearPlan={() => setPlan([])}
+              />
+            </section>
           </div>
         </div>
       </div>
