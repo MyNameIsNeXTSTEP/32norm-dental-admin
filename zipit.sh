@@ -1,1 +1,1 @@
-tar -czvf site-v2.tar.gz -C out/ .
+tar -czvf site-v3.tar.gz -C out/ .

@@ -143,16 +143,34 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user.id) return;
-    const local = localStorage.getItem(`dent_services_${user.id}`);
-    if (!local) return;
-    try {
-      const parsed = JSON.parse(local);
-      if (parsed?.surgery && parsed?.ortho) {
-        setServices(parsed);
+    (async () => {
+      try {
+        const data = await apiJson("/api/services.php?query=get");
+        const dbServices = data.services || {};
+        if (Object.keys(dbServices).length > 0) {
+          setServices((prev) => {
+            const merged = { ...prev };
+            for (const cat of Object.keys(dbServices)) {
+              const existing = prev[cat] || [];
+              const existingNames = new Set(existing.map((s) => s.name));
+              const newItems = dbServices[cat].filter((s) => !existingNames.has(s.name));
+              merged[cat] = [...existing, ...newItems];
+            }
+            return merged;
+          });
+        }
+      } catch (_err) {
+        // fall back to localStorage if DB unavailable
+        const local = localStorage.getItem(`dent_services_${user.id}`);
+        if (!local) return;
+        try {
+          const parsed = JSON.parse(local);
+          if (parsed?.surgery && parsed?.ortho) setServices(parsed);
+        } catch (_e) {
+          // ignore
+        }
       }
-    } catch (_err) {
-      // ignore invalid local storage
-    }
+    })();
   }, [user.id]);
 
   useEffect(() => {
@@ -235,10 +253,18 @@ export default function HomePage() {
     });
   }
 
-  function deleteService(serviceName) {
+  async function deleteService(serviceName) {
     const inPlan = plan.some((item) => item.name === serviceName);
     const warning = inPlan ? "\n\nУслуга уже есть в плане." : "";
     if (!window.confirm(`Удалить услугу "${serviceName}" из прайса?${warning}`)) return;
+    try {
+      await apiJson("/api/services.php?query=delete", {
+        method: "POST",
+        body: JSON.stringify({ category: currentCat, name: serviceName }),
+      });
+    } catch (_err) {
+      // service may not exist in DB (default service), proceed with local removal
+    }
     setServices((prev) => ({
       ...prev,
       [currentCat]: prev[currentCat].filter((item) => item.name !== serviceName),
@@ -254,7 +280,7 @@ export default function HomePage() {
     setPlan((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function addNewService() {
+  async function addNewService() {
     const name = newName.trim();
     const priceRaw = newPrice.trim();
     if (!name || !priceRaw) {
@@ -262,6 +288,15 @@ export default function HomePage() {
       return;
     }
     const price = normalizePrice(priceRaw);
+    try {
+      await apiJson("/api/services.php?query=add", {
+        method: "POST",
+        body: JSON.stringify({ category: currentCat, name, price: String(priceRaw) }),
+      });
+    } catch (err) {
+      window.alert(`Ошибка сохранения: ${err.message}`);
+      return;
+    }
     setServices((prev) => ({
       ...prev,
       [currentCat]: [...prev[currentCat], { name, price }],

@@ -24,6 +24,18 @@ CREATE TABLE IF NOT EXISTS treatment_plans (
     CONSTRAINT fk_plans_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS doctor_services (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    doctor_id INT UNSIGNED NOT NULL,
+    category VARCHAR(64) NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    price VARCHAR(64) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_doctor_services_doctor (doctor_id),
+    CONSTRAINT fk_doctor_services_doctor FOREIGN KEY (doctor_id) REFERENCES doctors(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Create first doctor manually by replacing PASSWORD_HASH:
 -- Example hash generation:
 -- php -r "echo password_hash('ChangeStrongPass123!', PASSWORD_DEFAULT), PHP_EOL;"
