@@ -50,7 +50,7 @@ export function ServicesCatalogPanel({
               key={`${item.name}_${String(item.price)}`}
             >
               <div className="min-w-0 space-y-1">
-                <p className="truncate text-sm font-medium">{item.name}</p>
+                <p className="truncate text-sm font-medium max-w-[500px] text-wrap">{item.name}</p>
                 <Badge variant="secondary">
                   {typeof item.price === "number" ? `${item.price} ₽` : `${item.price} ₽`}
                 </Badge>

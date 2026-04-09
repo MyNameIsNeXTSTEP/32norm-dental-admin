@@ -14,33 +14,8 @@ import { TreatmentPlanTable } from "@/components/treatment/treatment-plan-table"
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const DEFAULT_SERVICES = {
-  surgery: [
-    { name: "Установка импланта Dentium (премиум)", price: 39500 },
-    { name: "Установка импланта Dentium (базовая)", price: 33600 },
-    { name: "Установка импланта Osstem", price: 4200 },
-    { name: "Формирователь Dentium", price: 3600 },
-    { name: "Формирователь Osstem", price: 15000 },
-    { name: "Закрытый синус-лифтинг", price: 30000 },
-    { name: "Закрытый синус + кость", price: 10000 },
-    { name: "Открытый синус-лифтинг 1гр", price: 60000 },
-    { name: "Открытый синус-лифтинг 2гр", price: 90000 },
-    { name: "Открытый синус-лифтинг 3гр", price: 120000 },
-    { name: "Направленная регенерация (1-2ед)", price: "6000-12000" },
-    { name: "PRF-мембраны", price: 10000 },
-    { name: "Удаление зуба (простое)", price: 3500 },
-    { name: "Удаление зуба (сложное)", price: 6500 },
-    { name: "Вскрытие абсцесса", price: 4000 },
-    { name: "Пластика уздечки языка/губы", price: 5500 },
-  ],
-  ortho: [
-    { name: "Металлокерамическая коронка", price: 7000 },
-    { name: "Коронка из диоксида циркония", price: 18000 },
-    { name: "Съемный протез (частичный)", price: 25000 },
-    { name: "Полный съемный протез", price: 40000 },
-    { name: "Временная коронка", price: 3000 },
-    { name: "Культевая вкладка", price: 6500 },
-    { name: "Бюгельный протез", price: 45000 },
-  ],
+  surgery: [],
+  ortho: [],
 };
 
 const emptyUser = { id: null, login: "", display_name: "" };
@@ -530,7 +505,7 @@ export default function HomePage() {
           <AppHeader user={user} theme={theme} onThemeToggle={toggleTheme} onLogout={handleLogout} />
 
           {isApiOffline ? (
-            <Alert className="mx-4 mt-4 border-amber-300/40 bg-amber-50/70 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200 sm:mx-6">
+            <Alert className="mx-4 mt-4 border-amber-300/40 bg-amber-50/70 text-amber-900 dark:bg-amber-500/10 dark:text-amber-200 sm:mx-6 max-w-[95%]">
               <AlertDescription>{offlineError}</AlertDescription>
             </Alert>
           ) : null}
